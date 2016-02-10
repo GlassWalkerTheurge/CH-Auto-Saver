@@ -15,15 +15,30 @@
 ; //Changed sort order in listview to sortdesc (sort descending) on date prior to gui, show
 ; //Added version history
 ; //Replaced ToolTip with TrayTip
+;Updated ver 03
+; on Fri Feb 5
+; by GlassWalkerTheurge
+; //added "ini" to script file
+; //added option for toast notifications
+; //added option for number of files to save 
+; ** fixed problem with if statemenst as per throwaway_ye at https://www.reddit.com/r/AutoHotkey/comments/44derr/checkbox_returns_value_listbox_does_not_ahk/
 
 ;Future Possible Updates
-; Scientific Notation for HZE? (would need to greatly increase width) and Immortal damage (columns would no longer be integer)
-; add options to gui (max save count)
-; add options to gui (date based retention) would need to add substantial amount of code
+; Scientific Notation for HZE? (would need to greatly increase width) and Immortal damage (columns would no longer be integer[if longer 14 places])
+; add morgulis level to stats listed in the game save data
+; add iris level to stats listed in game save data
+; XX add options to gui (max save count)
+; XX add options to gui (date based retention) 
 ; XX switch from ToolTip to TrayTip
 
-maxSaveCount := 60
-
+;GlobalVariables
+global booToast := 1
+global chkToast := 1
+global intSaveCount := 4
+global lbxSaves := 4
+global maxSaveCount := 60
+;Read options
+gosub, OptRead
 menu, tray, add ; separator
 menu, tray, add, View_Saves
 menu, tray, Default, View_Saves
@@ -31,18 +46,81 @@ Chars = ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
 StringCaseSense On
 return
 
+OptRead:
+	;//GetSettings
+	;UserInterface
+	IniRead, booToast, %A_ScriptName%, UserInterface, Toast1
+	;Saves
+	IniRead, intSaveCount, %A_ScriptName%, Saves, Local1
+	If (intSaveCount = 1) 
+		maxSaveCount = 10
+	
+	Else If (intSaveCount = 2)
+		maxSaveCount = 20 
+	
+	Else If (intSaveCount = 3) 
+		maxSaveCount = 30
+	
+	Else If (intSaveCount = 4) 
+		maxSaveCount = 60
+
+	Else If (intSaveCount = 5) 
+		maxSaveCount = 80
+	
+	Else If (intSaveCount = 6) 
+		maxSaveCount = 120
+
+	;MsgBox, 0, test, Toast = %booToast%`nintSave = %intSaveCount%`nmaxSave = %maxSaveCount%
+return
+
+OptWrite:
+	;Toast Messages
+	IniWrite, %chkToast%, %A_ScriptName%, UserInterface, Toast1
+	booToast = %chkToast%
+	;Files to save
+	maxSaveCount = %lbxSaves%
+	If (maxSaveCount = 10)
+		intSaveCount = 1
+	
+	Else If (maxSaveCount = 20) 
+		intSaveCount = 2
+	
+	Else If (maxSaveCount = 30) 
+		intSaveCount = 3
+	
+	Else If (maxSaveCount = 60) 
+		intSaveCount = 4
+	
+	Else If (maxSaveCount = 80) 
+		intSaveCount = 5
+	
+	Else (maxSaveCount = 120)
+		intSaveCount = 6
+		
+	IniWrite, %intSaveCount%, %A_ScriptName%, Saves, Local1
+		
+	;MsgBox, 0, test, ToastchkToast = %chkToast%`nToast = %booToast%`nlbxSavesSave = %lbxSaves%`nintSave = %intSaveCount%`nMaxSave = %maxSaveCount%
+return
+
 View_Saves:
+	;load options
+	gosub, OptRead
+	;Check for existance of info.txt create if not there
 	IfNotExist info.txt
 		populateInfo()
 	compareInfo()
+	; Generated using SmartGUI Creator for SciTE
+	Gui, Add, Tab2, x2 y1 w480 h380 , Saves|Options
 	; create the ListView with column names seperated by |s
-	Gui, Add, ListView, r60 w400 gMyListView, Filename|   HZE   |Immortal Damage|Solomon|Rubies|%A_Space%
+	Gui, Add, ListView, x2 y19 w480 h360 gMyListView, Filename|   HZE   |Immortal Damage|Solomon|Rubies|%A_Space%
+
+	; Files Tab
 	; gather a list of file names from a folder and put them into the ListView
 	Loop, read, info.txt
 	{
 		Loop, parse, A_LoopReadLine, %A_Tab%
 			field%A_Index% := A_LoopField
-		LV_Add("", field1, field2, field3, field4, field5)
+		LV_Add("", field1, field2, Dec2Sci(field3,14), field4, field5)
 	}	
 	LV_ModifyCol(1)  ; auto-sizes column 1
 	LV_ModifyCol(2, "Integer")  ; for sorting purposes, indicate that column 2-5 are integers (-3)
@@ -52,9 +130,14 @@ View_Saves:
 	LV_ModifyCol(6, "0") ; dont display empty column
 	LV_ModifyCol(1, "SortDesc") ;  Sort in descending order
 	Sort:=1
+
+	;Options Tab
+	Gui, Tab, Options
+	Gui, Add, CheckBox, x12 y30 w160 h30 vchkToast Checked%booToast%, Enable Toast Message
+	Gui, Add, Text, x12 y60 w160 h30 , Number of files to save
+	Gui, Add, ListBox, x182 y60 w110 h20 vlbxSaves choose%intSaveCount%, 10|20|30|60|80|120
 	Gui, Show
 return
-
 
 
 MyListView:
@@ -75,11 +158,11 @@ MyListView:
 	}
 return
 
-
 GuiClose:
+	Gui, Submit, NoHide
+	gosub, OptWrite
 	Gui, Destroy
 return
-
 
 OnClipboardChange:
 	if (A_EventInfo != 1)
@@ -108,7 +191,9 @@ OnClipboardChange:
 	}
 	filename := "CHSave" . A_Now . ".txt"
 	;tooltip Clipboard copied to %filename%
-	TrayTip CHAutoSave, Clipboard copied to %filename%
+	If (booToast = "1") {
+		TrayTip CHAutoSave, Clipboard copied to %filename%
+	}
 	FileAppend, %codedsave%, %filename%
 	HZE := json(decodedsave, "highestFinishedZonePersist")
 	solomon := json(decodedsave, "ancients.ancients.3.level")
@@ -173,7 +258,9 @@ compareInfo() ; gets called by View_Saves and OnClipboardChange
 	if (saveCount > infoCount) ; more CHSave<date>s then what's in info.txt
 	{
 		;tooltip Adding missing CHSave to info.txt
-		TrayTip CHAutoSave, Adding missing CHSave to info.txt
+		If (booToast = "1") {
+			TrayTip CHAutoSave, Adding missing CHSave to info.txt
+		}
 		difference := saveCount - infoCount
 		Loop, CHSave*.*
 		{
@@ -208,7 +295,9 @@ compareInfo() ; gets called by View_Saves and OnClipboardChange
 	else if (saveCount < infoCount)
 	{
 		;tooltip Removing entries from info.txt for nonexistant CHSave files
-		TrayTip CHAutoSave, Removing entries from info.txt for nonexistant CHSave files
+		If (booToast = "1") {
+			TrayTip CHAutoSave, Removing entries from info.txt for nonexistant CHSave files
+		}
 		difference := infoCount - saveCount
 		missingCount := 0
 		Loop, read, info.txt
@@ -267,7 +356,9 @@ populateInfo() ; gets called when there's no info.txt
 		if not ErrorLevel  ; Successfully loaded.
 		{
 			;tooltip Populating info.txt... Decoding CHSave#%A_Index%
-			TrayTip CHAutoSave, Populating info.txt... Decoding CHSave#%A_Index%
+			If (booToast = "1") {
+				TrayTip CHAutoSave, Populating info.txt... Decoding CHSave#%A_Index%
+			}
 			decodedSave := decodeSave(contents) ; by far the slowest operation
 			HZE := json(decodedSave, "highestFinishedZonePersist")
 			immortalDamage := json(decodedSave, "titanDamage")
@@ -372,3 +463,33 @@ json(ByRef js, s, v = "") {
 	Return, j == "false" ? 0 : j == "true" ? 1 : j == "null" or j == "nul"
 		? "" : SubStr(j, 1, 1) == """" ? SubStr(j, 2, -1) : j
 }
+
+Dec2Sci(MyNumber,Places){
+	;From post https://autohotkey.com/board/topic/93902-decimal-to-scientific-notation-converter/
+	; \\ Added places to allow custimizable scientific
+	;MyNumber is number to be converted to ScientificNotation
+	;Places is number of places must be in number before it is converted to scientific notation
+	stringlen, intLength, MyNumber
+	if (intLength >= Places) {
+		if !MyNumber
+			;return, "0*E0"
+			return, "0E0"
+		factor := 1	, Exponent := 0
+		while (Abs(MyNumber)*factor >= 10) && Abs(MyNumber) > 1
+			factor /= 10 , Exponent++
+		while (Abs(MyNumber)*factor <= 1) && Abs(MyNumber) < 1
+			factor *= 10 , Exponent--
+		return RegExReplace(MyNumber*factor, "0*$") .  "*E"Exponent
+		}
+		
+	Else {
+		return MyNumber
+	}
+}
+
+/*
+[UserInterface]
+Toast1=1
+[Saves]
+Local1=6
+*/
