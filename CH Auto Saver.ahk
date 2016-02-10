@@ -10,13 +10,12 @@ Chars = ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
 StringCaseSense On
 return
 
-
 View_Saves:
 	IfNotExist info.txt
 		populateInfo()
 	compareInfo()
 	; create the ListView with column names seperated by |s
-	Gui, Add, ListView, r60 w400 gMyListView, Filename|HZE|Immortal Damage|Solomon|Rubies|%A_Space%
+	Gui, Add, ListView, r60 w400 gMyListView, Filename|   HZE   |Immortal Damage|Solomon|Rubies|%A_Space%
 	; gather a list of file names from a folder and put them into the ListView
 	Loop, read, info.txt
 	{
@@ -30,6 +29,8 @@ View_Saves:
 	LV_ModifyCol(4, "Integer")
 	LV_ModifyCol(5, "Integer")
 	LV_ModifyCol(6, "0") ; dont display empty column
+	LV_ModifyCol(1, "SortDesc") ;  Sort in descending order
+	Sort:=1
 	Gui, Show
 return
 
