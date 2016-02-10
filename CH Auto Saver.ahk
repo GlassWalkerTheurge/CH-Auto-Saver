@@ -1,6 +1,27 @@
 #Persistent
 #SingleInstance force
 
+;Created ver 00
+; on Wed Feb 3 2016 at 07:41:38
+; by https://www.reddit.com/user/Xeno234
+; at https://www.reddit.com/r/ClickerHeroes/comments/43su2t/guys_seriously_make_hard_copies_of_your_save_on/
+;Updated ver 01
+; on Wed Feb 3
+; by GlassWalkerTheurge
+; //Updated HZE listview to increase width (added 3 spaces on either side of HZE title)
+;Updated ver 02
+; on Wed Feb 3
+; by GlassWalkerTheurge
+; //Changed sort order in listview to sortdesc (sort descending) on date prior to gui, show
+; //Added version history
+; //Replaced ToolTip with TrayTip
+
+;Future Possible Updates
+; Scientific Notation for HZE? (would need to greatly increase width) and Immortal damage (columns would no longer be integer)
+; add options to gui (max save count)
+; add options to gui (date based retention) would need to add substantial amount of code
+; XX switch from ToolTip to TrayTip
+
 maxSaveCount := 60
 
 menu, tray, add ; separator
@@ -35,18 +56,22 @@ View_Saves:
 return
 
 
+
 MyListView:
 	if A_GuiEvent = DoubleClick
 	{
 		LV_GetText(RowText, A_EventInfo)  ; Get the text from the row's first field.
 		FileRead, codedSave, %RowText%
 		if ErrorLevel
-			Tooltip Error copying %RowText% to clipboard
+			;Tooltip Error copying %RowText% to clipboard
+			TrayTip CHAutoSaver, Error copying %RowText% to clipboard
 		else
-			ToolTip Copied %RowText% to clipboard
+			;ToolTip Copied %RowText% to clipboard
+			TrayTip CHAutoSaver, Copied %RowText% to clipboard
 		clipboard := codedSave
 		sleep 2000
-		ToolTip
+		;ToolTip
+		TrayTip
 	}
 return
 
@@ -82,14 +107,16 @@ OnClipboardChange:
 			deleteOldestSave(infoCount + 1 - maxSaveCount)
 	}
 	filename := "CHSave" . A_Now . ".txt"
-	tooltip Clipboard copied to %filename%
+	;tooltip Clipboard copied to %filename%
+	TrayTip CHAutoSave, Clipboard copied to %filename%
 	FileAppend, %codedsave%, %filename%
 	HZE := json(decodedsave, "highestFinishedZonePersist")
 	solomon := json(decodedsave, "ancients.ancients.3.level")
 	rubies := json(decodedsave, "rubies")
 	FileAppend %filename%%A_Tab%%HZE%%A_Tab%%immortalDamage%%A_Tab%%solomon%%A_Tab%%rubies%`n, info.txt
 	sleep 2500
-	tooltip
+	;tooltip
+	TrayTip
 return
 
 
@@ -145,7 +172,8 @@ compareInfo() ; gets called by View_Saves and OnClipboardChange
 		return
 	if (saveCount > infoCount) ; more CHSave<date>s then what's in info.txt
 	{
-		tooltip Adding missing CHSave to info.txt
+		;tooltip Adding missing CHSave to info.txt
+		TrayTip CHAutoSave, Adding missing CHSave to info.txt
 		difference := saveCount - infoCount
 		Loop, CHSave*.*
 		{
@@ -179,7 +207,8 @@ compareInfo() ; gets called by View_Saves and OnClipboardChange
 	}
 	else if (saveCount < infoCount)
 	{
-		tooltip Removing entries from info.txt for nonexistant CHSave files
+		;tooltip Removing entries from info.txt for nonexistant CHSave files
+		TrayTip CHAutoSave, Removing entries from info.txt for nonexistant CHSave files
 		difference := infoCount - saveCount
 		missingCount := 0
 		Loop, read, info.txt
@@ -224,7 +253,8 @@ compareInfo() ; gets called by View_Saves and OnClipboardChange
 			fileDelete info.txt
 			fileAppend, %file%, info.txt
 		}
-		tooltip
+		;tooltip
+		TrayTip
 	}
 }
 
@@ -236,7 +266,8 @@ populateInfo() ; gets called when there's no info.txt
 		FileRead, contents, %A_LoopFileName%
 		if not ErrorLevel  ; Successfully loaded.
 		{
-			tooltip Populating info.txt... Decoding CHSave#%A_Index%
+			;tooltip Populating info.txt... Decoding CHSave#%A_Index%
+			TrayTip CHAutoSave, Populating info.txt... Decoding CHSave#%A_Index%
 			decodedSave := decodeSave(contents) ; by far the slowest operation
 			HZE := json(decodedSave, "highestFinishedZonePersist")
 			immortalDamage := json(decodedSave, "titanDamage")
@@ -246,11 +277,13 @@ populateInfo() ; gets called when there's no info.txt
 		}
 		else
 		{
-			tooltip
+			;tooltip
+			TrayTip
 			msgbox,,, error reading %A_LoopFileName%, 5
 		}
 	}
-	tooltip
+	;tooltip
+	TrayTip
 }
 
 
