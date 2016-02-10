@@ -40,6 +40,7 @@
 ; --name mercenaries.mercenaries.0.name [TrimFill(strString, 6, "-")]
 ; --level mercenaries.mercenaries.0.level [TrimFill(strString, 3, "0")]
 ; --add loop for mercenaries loop (0-4) to check for highest level merc or return none:000
+; //changed font to fixedwidth for better viewing
 ;
 ;Future Possible Updates
 ; add iris level to stats listed in game save data (don't think this is needed)
