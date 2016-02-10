@@ -5,16 +5,19 @@
 ; on Wed Feb 3 2016 at 07:41:38
 ; by https://www.reddit.com/user/Xeno234
 ; at https://www.reddit.com/r/ClickerHeroes/comments/43su2t/guys_seriously_make_hard_copies_of_your_save_on/
+;
 ;Updated ver 01
 ; on Wed Feb 3
 ; by GlassWalkerTheurge
 ; //Updated HZE listview to increase width (added 3 spaces on either side of HZE title)
+;
 ;Updated ver 02
 ; on Wed Feb 3 2016
 ; by GlassWalkerTheurge
 ; //Changed sort order in listview to sortdesc (sort descending) on date prior to gui, show
 ; //Added version history
 ; //Replaced ToolTip with TrayTip
+;
 ;Updated ver 03
 ; on Fri Feb 5 2016
 ; by GlassWalkerTheurge
@@ -22,29 +25,36 @@
 ; //added option for toast notifications
 ; //added option for number of files to save 
 ; ** fixed problem with if statemenst as per throwaway_ye at https://www.reddit.com/r/AutoHotkey/comments/44derr/checkbox_returns_value_listbox_does_not_ahk/
+;
 ;Updated ver 04
 ; on Sun Feb 6 2016
 ; by GlassWalkerTheurge
 ; //added morgulis
 ; //added option for scientific notation Auto|Always|Never
 ; //added save button
-
-;Future Possible Updates
-; XX add morgulis level to stats listed in the game save data
-; XX add options to gui (max save count)
-; XX add options to gui (date based retention) 
-; XX switch from ToolTip to TrayTip
-; X Scientific Notation for HZE? (would need to greatly increase width) and Immortal damage (columns would no longer be integer[if longer 14 places])
-; add iris level to stats listed in game save data
-; add mercenary {name[first 6 char pad if shorter]}:{level[pad to 3 characters]}
+; //added variable for file name
+;
+;Updated ver 05
+; on Mon Feb 8 2016
+; //add mercenary {name[first 6 char pad if shorter]}:{level[pad to 3 characters]} (total length of field 10 characters)
 ; --name mercenaries.mercenaries.0.name [TrimFill(strString, 6, "-")]
 ; --level mercenaries.mercenaries.0.level [TrimFill(strString, 3, "0")]
+; --add loop for mercenaries loop (0-4) to check for highest level merc or return none:000
+;
+;Future Possible Updates
+; add iris level to stats listed in game save data (don't think this is needed)
+; add total clicks? totalClicks
+; have 4 "modes" to listview Idle | Hybrid | Active | Brief
+; --Idle would be current display {Filename|   HZE   |Immortal Damage|  Solomon  |  Morgulis  | Mercenary |Rubies}
+; --Hybrid would display {Filename|   HZE   |Immortal Damage|  Solomon  |  Juggernaut  | Morgulis |Rubies}
+; --Active would display {Filename|   HZE   |Immortal Damage|  Solomon  |  Juggernaut  | Fragsworth |Rubies}
+; --Brief would display {Filename|   HZE   |Immortal Damage|Rubies}
 
 ;Set working directory
 SetWorkingDir %A_ScriptDir% 
 
 ;GlobalVariables
-global filSavesList := "CH Auto Saver04.txt"
+global filSavesList := "CH Auto Saver05.txt" ; To prevent errors this needs to be changed everytime the file format is changed
 global booToast := 1
 global chkToast := 1
 global intSaveCount := 4
@@ -53,7 +63,7 @@ global lbxSaves := 4
 global intSaves := 4
 global lbxSciNot := 1
 global intSciNot := 1
-global booTest := true
+global booTest := false
 
 ;Read options
 gosub, OptRead
@@ -72,10 +82,12 @@ View_Saves:
 	IfNotExist %filSavesList%
 		populateInfo()
 	compareInfo()
+	; Set to better font
+	Gui Font,, Lucida Console
 	; Generated using SmartGUI Creator for SciTE
-	Gui, Add, Tab2, x2 y-1 w510 h380 , Saves|Options
+	Gui, Add, Tab2, x2 y-1 w720 h430 , Saves|Options
 	; create the ListView with column names seperated by |s
-	Gui, Add, ListView, x2 y19 w510 h400 gMyListView, Filename|   HZE   |Immortal Damage|   Solomon   |    Morgulis    |Rubies|%A_Space%
+	Gui, Add, ListView, x2 y19 w720 h430 gMyListView, Filename|   HZE   |Immortal Damage|  Solomon  |  Morgulis  | Mercenary |Rubies|%A_Space%
 
 	; Files Tab
 	; gather a list of file names from a folder and put them into the ListView
@@ -83,8 +95,8 @@ View_Saves:
 	{
 		Loop, parse, A_LoopReadLine, %A_Tab%
 			field%A_Index% := A_LoopField
-		;        (filename)       (HZE)          (immortal)       (sol)        (mor)         (rubies)
-		LV_Add("", field1, Dec2Sci(field2,10), Dec2Sci(field3,14),field4, Dec2Sci(field5,10), field6)
+		;        (filename)       (HZE)          (immortal)       (sol)        (mor)          (mercs)  (rubies)
+		LV_Add("", field1, Dec2Sci(field2,10), Dec2Sci(field3,14),field4, Dec2Sci(field5,10), field6, field7)
 	}	
 	LV_ModifyCol(1)  ; auto-sizes column 1
 	LV_ModifyCol(2, "Integer")  ; for sorting purposes, indicate that column 2-5 are integers (-3)
@@ -92,7 +104,8 @@ View_Saves:
 	LV_ModifyCol(4, "Integer")
 	LV_ModifyCol(5, "Integer")
 	LV_ModifyCol(6, "Integer")
-	LV_ModifyCol(7, "0") ; dont display empty column
+	LV_ModifyCol(7, "Integer")
+	LV_ModifyCol(8, "0") ; dont display empty column
 	LV_ModifyCol(1, "SortDesc") ;  Sort in descending order
 	Sort:=1
 
@@ -103,8 +116,8 @@ View_Saves:
 	Gui, Add, ListBox, x182 y60 w110 h20 vlbxSaves choose%intSaveCount%, 10|20|30|60|80|120
 	Gui, Add, Text, x12 y90 w160 h30 , Use Scientific Notation
 	Gui, Add, ListBox, x182 y90 w110 h20 vlbxSciNot AltSubmit choose%intSciNot%, Auto|Always|Never
-	Gui, Add, Button, x215 y387 w100 h30 vSave, Save
-	Gui, show
+	Gui, Add, Button, x250 y410 w100 h30 vSave, Save
+	Gui, Show
 return
 
 MyListView:
@@ -257,8 +270,27 @@ OnClipboardChange:
 	HZE := json(decodedsave, "highestFinishedZonePersist")
 	solomon := json(decodedsave, "ancients.ancients.3.level")
 	morgulis := json(decodedSave, "ancients.ancients.16.level")
+	;We have to hunt for mercs -- these slimy guys and gals are sometimes hiding
+	;if the highest one dies or multiples the slot 0 could be empty or you might 
+	;not have hired any of these shifty guys yet.
+	Loop 5 {
+		intscanmerc := A_Index - 1
+		mercnameS := json(decodedSave, "mercenaries.mercenaries." . intscanmerc . ".name")
+		merclvlS := json(decodedSave, "mercenaries.mercenaries." intscanmerc ".level")
+		
+		if (merclvlS > merclvl) {
+			mercname := mercnameS
+			merclvl := merclvlS
+		}
+
+	}
+	If (mercname = "") {
+		mercname := "-none-"
+		merclevel := "999"
+	}
+	merc := TrimFill(mercname, 6, "-")":"TrimFill(merclvl, 3, "0")
 	rubies := json(decodedsave, "rubies")
-	FileAppend %filename%%A_Tab%%HZE%%A_Tab%%immortalDamage%%A_Tab%%solomon%%A_Tab%%morgulis%%A_Tab%%rubies%`n, %filSavesList%
+	FileAppend %filename%%A_Tab%%HZE%%A_Tab%%immortalDamage%%A_Tab%%solomon%%A_Tab%%morgulis%%A_Tab%%merc%%A_Tab%%rubies%`n, %filSavesList%
 	sleep 2500
 	;tooltip
 	TrayTip
@@ -342,8 +374,27 @@ compareInfo() ; gets called by View_Saves and OnClipboardChange
 				HZE := json(decodedsave, "highestFinishedZonePersist")
 				solomon := json(decodedsave, "ancients.ancients.3.level")
 				morgulis := json(decodedSave, "ancients.ancients.16.level")
+				;We have to hunt for mercs -- these slimy guys and gals are sometimes hiding
+				;if the highest one dies or multiples the slot 0 could be empty or you might 
+				;not have hired any of these shifty guys yet.
+				Loop 5 {
+					intscanmerc := A_Index - 1
+					mercnameS := json(decodedSave, "mercenaries.mercenaries." . intscanmerc . ".name")
+					merclvlS := json(decodedSave, "mercenaries.mercenaries." intscanmerc ".level")
+					
+					if (merclvlS > merclvl) {
+						mercname := mercnameS
+						merclvl := merclvlS
+					}
+
+				}
+				If (mercname = "") {
+					mercname := "-none-"
+					merclevel := "999"
+				}
+				merc := TrimFill(mercname, 6, "-")":"TrimFill(merclvl, 3, "0")
 				rubies := json(decodedsave, "rubies")
-				FileAppend %A_LoopFileName%%A_Tab%%HZE%%A_Tab%%immortalDamage%%A_Tab%%solomon%%A_Tab%%morgulis%%A_Tab%%rubies%`n, %filSavesList%
+				FileAppend %A_LoopFileName%%A_Tab%%HZE%%A_Tab%%immortalDamage%%A_Tab%%solomon%%A_Tab%%morgulis%%A_Tab%%merc%%A_Tab%%rubies%`n, %filSavesList%
 				difference--
 				if not difference
 					break
@@ -425,8 +476,27 @@ populateInfo() ; gets called when there's no %filSavesList%
 			immortalDamage := json(decodedSave, "titanDamage")
 			solomon := json(decodedSave, "ancients.ancients.3.level")
 			morgulis := json(decodedSave, "ancients.ancients.16.level")
+			;We have to hunt for mercs -- these slimy guys and gals are sometimes hiding
+			;if the highest one dies or multiples the slot 0 could be empty or you might 
+			;not have hired any of these shifty guys yet.
+			Loop 5 {
+				intscanmerc := A_Index - 1
+				mercnameS := json(decodedSave, "mercenaries.mercenaries." . intscanmerc . ".name")
+				merclvlS := json(decodedSave, "mercenaries.mercenaries." intscanmerc ".level")
+				
+				if (merclvlS > merclvl) {
+					mercname := mercnameS
+					merclvl := merclvlS
+				}
+
+			}
+			If (mercname = "") {
+				mercname := "-none-"
+				merclevel := "999"
+			}
+			merc := TrimFill(mercname, 6, "-")":"TrimFill(merclvl, 3, "0")
 			rubies := json(decodedSave, "rubies")
-			FileAppend %A_LoopFileName%%A_Tab%%HZE%%A_Tab%%immortalDamage%%A_Tab%%solomon%%A_Tab%%morgulis%%A_Tab%%rubies%`n, %filSavesList%
+			FileAppend %A_LoopFileName%%A_Tab%%HZE%%A_Tab%%immortalDamage%%A_Tab%%solomon%%A_Tab%%morgulis%%A_Tab%%merc%%A_Tab%%rubies%`n, %filSavesList%
 		}
 		else
 		{
@@ -557,29 +627,17 @@ Dec2Sci(MyNumber,Places){
 	}
 }
 
-TrimFill(strString, intLength, strFill) {
-	;strString the string to be trimmed and filled
-	;intLength the length of the new string
-	;strFill the character to fill the string with if it is too short (left fill)
-	StringLen,curLength, strString
-
-	if (curLength < intLength) {
-		intDiff = %intLength% - %curLength%
-		
-		loop %intDiff% {
-			strNewString := %strFill% . strString
-		}
-		
-	}
-
-	Else If (curLength > intLength) {
-		StringLeft, strNewString, strString, intLength
-		Return strNewString
-	}
+TrimFill(string,length,fill="") {
 	
-	Else If (curLength = intLength) {
-		Return strString
-	}
+    if (StrLen(string)=length)
+        return %string%
+    else if (StrLen(string)>length)
+        return SubStr(string,1,length)
+    else if (StrLen(string)<length) {
+        Loop % (length-StrLen(string))
+            v.=fill
+        return v.=string
+    }
 }
 
 /*
